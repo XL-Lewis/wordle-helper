@@ -1,9 +1,11 @@
-use core::num;
-
+use std::collections::HashSet;
 use tokio::io;
 use tokio::io::AsyncBufReadExt;
-use tokio::time::sleep;
-use tokio::time::Duration;
+
+// TODO:
+// Track letter placement
+// Improve efficiency + data structures (hashmaps?)
+// Undo functionality
 
 use tokio::io::BufReader;
 
@@ -36,25 +38,29 @@ async fn main() {
 
 async fn process_inputs() -> Result<(), Box<dyn std::error::Error>> {
     let stdin = io::stdin();
+    let mut buffer = BufReader::new(stdin);
+
     let mut letters_alphabetical = vec![
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
         'y', 'z',
     ];
-
     let mut letters_frequency = vec![
         'e', 'a', 'r', 'i', 'o', 't', 'n', 's', 'l', 'c', 'u', 'd', 'p', 'm', 'h', 'g', 'b', 'f', 'y', 'w', 'k', 'v', 'x', 'z',
         'j', 'q',
     ];
 
+    let mut double_letters = HashSet::new();
     let mut used_words: Vec<String> = Vec::new();
 
-    let mut buffer = BufReader::new(stdin);
-
     loop {
-        println!("-----------------");
+        println!("-----------------\n\n");
         let mut line = String::new();
+
         buffer.read_line(&mut line).await?;
         let word = &line[0..line.len() - 1];
+        for letter in check_double_letter(&word) {
+            double_letters.insert(letter);
+        }
 
         if word == "q" {
             println!("Exiting . . .");
@@ -98,7 +104,14 @@ async fn process_inputs() -> Result<(), Box<dyn std::error::Error>> {
 
             println!("{}      {}", a.to_uppercase(), b.to_uppercase());
         }
-        print!("\n\n\n");
+
+        println!("\n");
+        print!("Double letters: ");
+        for letter in &double_letters {
+            print!("{}", letter)
+        }
+
+        println!("\n\n");
 
         // Print all used words
         let mut word_index = 0;
@@ -118,6 +131,22 @@ fn get_next_x_items_from_array<T: ToString>(num_items: usize, index: usize, arr:
             None => " ".to_string(),
         };
         ret.push_str(&maybe);
+    }
+    ret
+}
+
+fn check_double_letter(input: &str) -> Vec<char> {
+    let chars: Vec<char> = input.chars().collect();
+    let mut ret = Vec::new();
+
+    for i in 0..chars.len() {
+        let mut j = chars.len() - 1;
+        while j != i {
+            if chars[i] == chars[j] {
+                ret.push(chars[i]);
+            }
+            j -= 1;
+        }
     }
     ret
 }
