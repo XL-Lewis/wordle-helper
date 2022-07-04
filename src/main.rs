@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use tokio::io;
 use tokio::io::AsyncBufReadExt;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 // TODO:
 // Track letter placement
@@ -9,10 +10,8 @@ use tokio::io::AsyncBufReadExt;
 
 use tokio::io::BufReader;
 
-const ALPHABET_LINE_SIZE: usize = 4;
-const WORD_LINE_SIZE: usize = 3;
-
-#[tokio::main]
+const ALPHABET_LINE_SIZE: usize = 5;
+const WORD_LINE_SIZE: usize = 5;
 
 // Components:
 // 1. stdin reader
@@ -20,26 +19,30 @@ const WORD_LINE_SIZE: usize = 3;
 // 3. Common letters checker
 // 4. Printer for 2 and 3
 
+// Alphabet struct:
+// hashmap with
+#[tokio::main]
 async fn main() {
+    let (stdin_snd, stdin_rcv) = unbounded_channel::<String>();
     println!("Starting...");
-    tokio::spawn(async { process_inputs() }).await.expect("").await.expect("");
+    tokio::spawn(get_stdin(stdin_snd));
+    tokio::spawn(check_word(stdin_rcv));
+
+    loop {}
 }
 
-// async fn read_inputs() {
-//     match process_inputs().await {
-//         Err(e) => {
-//             println!("Error: {}", e);
-//         },
-//         _ => {
-//             println!("Program ended!")
-//         },
-//     }
-// }
-
-async fn process_inputs() -> Result<(), Box<dyn std::error::Error>> {
+async fn get_stdin(snd: UnboundedSender<String>) {
     let stdin = io::stdin();
-    let mut buffer = BufReader::new(stdin);
+    let mut lines = BufReader::new(stdin).lines();
 
+    loop {
+        if let Some(word) = lines.next_line().await.unwrap() {
+            snd.send(word).expect("Failed to send to word checker");
+        }
+    }
+}
+
+async fn check_word(mut rcv: UnboundedReceiver<String>) {
     let mut letters_alphabetical = vec![
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
         'y', 'z',
@@ -48,23 +51,26 @@ async fn process_inputs() -> Result<(), Box<dyn std::error::Error>> {
         'e', 'a', 'r', 'i', 'o', 't', 'n', 's', 'l', 'c', 'u', 'd', 'p', 'm', 'h', 'g', 'b', 'f', 'y', 'w', 'k', 'v', 'x', 'z',
         'j', 'q',
     ];
-
     let mut double_letters = HashSet::new();
     let mut used_words: Vec<String> = Vec::new();
 
     loop {
         println!("-----------------\n\n");
-        let mut line = String::new();
+        println!("Enter word: ");
 
-        buffer.read_line(&mut line).await?;
-        let word = &line[0..line.len() - 1];
+        let word = if let Some(wrd) = rcv.recv().await {
+            wrd
+        } else {
+            break;
+        };
+
         for letter in check_double_letter(&word) {
             double_letters.insert(letter);
         }
 
         if word == "q" {
             println!("Exiting . . .");
-            return Ok(());
+            break;
         }
 
         // check length and store word as used
