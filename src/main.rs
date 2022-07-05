@@ -67,7 +67,6 @@ async fn check_word(mut rcv: UnboundedReceiver<String>) {
     let mut letters = Letters::new();
 
     loop {
-        println!("-----------------\n\n");
         println!("Enter word: ");
 
         // Grab input from stdin
@@ -76,6 +75,7 @@ async fn check_word(mut rcv: UnboundedReceiver<String>) {
         } else {
             break;
         };
+        print!("\x1B[2J\x1B[1;1H");
 
         // Check word validity and
         if word.len() != WORD_LENGTH || !word.is_ascii() {
@@ -119,11 +119,12 @@ async fn check_word(mut rcv: UnboundedReceiver<String>) {
         // Print double letters used
         print!("\n\nDouble letters:  [");
         for letter in &double_letters {
-            print!("{},", letter)
+            print!("{}, ", letter)
         }
 
         // Print letters removed after previous word
         println!("]\nRemoved letters: [{}]", removed_letters);
+        println!("-----------------");
     }
 }
 
