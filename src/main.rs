@@ -1,4 +1,6 @@
+use indexmap::{indexset, IndexSet};
 use std::collections::HashSet;
+use std::iter::Iterator;
 use tokio::io;
 use tokio::io::AsyncBufReadExt;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
@@ -12,7 +14,28 @@ use tokio::io::BufReader;
 
 const ALPHABET_LINE_SIZE: usize = 5;
 const WORD_LINE_SIZE: usize = 5;
+const WORD_LENGTH: usize = 5;
 
+pub struct Letters {
+    alph: IndexSet<char>,
+    freq: IndexSet<char>,
+}
+
+impl Letters {
+    fn new() -> Self {
+        Self {
+            alph: indexset! {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'},
+            freq: indexset! {'e','a','r','i','o','t','n','s','l','c','u','d','p','m','h','g','b','f','y','w','k','v','x','z','j','q'},
+        }
+    }
+
+    fn remove(&mut self, char: char) -> bool {
+        if self.freq.shift_remove(&char) && self.alph.shift_remove(&char) {
+            return true;
+        }
+        return false;
+    }
+}
 // Components:
 // 1. stdin reader
 // 2. Alphabet checker
@@ -37,106 +60,93 @@ async fn get_stdin(snd: UnboundedSender<String>) {
 
     loop {
         if let Some(word) = lines.next_line().await.unwrap() {
+            if word == "q" {
+                println!("Exiting . . .");
+                break;
+            }
             snd.send(word).expect("Failed to send to word checker");
         }
     }
 }
 
 async fn check_word(mut rcv: UnboundedReceiver<String>) {
-    let mut letters_alphabetical = vec![
-        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
-        'y', 'z',
-    ];
-    let mut letters_frequency = vec![
-        'e', 'a', 'r', 'i', 'o', 't', 'n', 's', 'l', 'c', 'u', 'd', 'p', 'm', 'h', 'g', 'b', 'f', 'y', 'w', 'k', 'v', 'x', 'z',
-        'j', 'q',
-    ];
     let mut double_letters = HashSet::new();
     let mut used_words: Vec<String> = Vec::new();
+    let mut letters = Letters::new();
 
     loop {
         println!("-----------------\n\n");
         println!("Enter word: ");
 
+        // Grab input from stdin
         let word = if let Some(wrd) = rcv.recv().await {
             wrd
         } else {
             break;
         };
 
+        // Check word validity and
+        if word.len() != WORD_LENGTH || !word.is_ascii() {
+            println!("Invalid word! It should be 5 ascii letters. Length was {}", word.len());
+            continue;
+        }
+        used_words.push(word.to_string());
+
+        // Double letter check
         for letter in check_double_letter(&word) {
             double_letters.insert(letter);
         }
 
-        if word == "q" {
-            println!("Exiting . . .");
-            break;
-        }
-
-        // check length and store word as used
-        if word.len() != 5 || !word.is_ascii() {
-            println!("Invalid word! It should be 5 ascii letters. Length was {}", word.len());
-            continue;
-        }
-
-        used_words.push(word.to_string());
-
         // Remove used letters from arrays
+        let mut removed_letters = String::new();
         for letter in word.chars() {
-            for i in 0..letters_alphabetical.len() - 1 {
-                let stored_letter = letters_alphabetical[i];
-                if letter == stored_letter {
-                    letters_alphabetical.remove(i);
-                    for j in 0..letters_frequency.len() - 1 {
-                        let stored_letter = letters_frequency[j];
-                        if letter == stored_letter {
-                            letters_frequency.remove(j);
-                        }
-                    }
-                    continue;
-                }
+            if letters.remove(letter) {
+                removed_letters.push(letter);
             }
         }
 
-        println!("\n\nLetters left: ");
+        // Format letters for printing
+        let freq_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, letters.freq.iter(), "");
+        let alph_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, letters.alph.iter(), "");
+        // Format previously used words for printing
+        let words = group_iter_into_blocks(WORD_LINE_SIZE, used_words.iter(), ", ");
 
-        let mut alph_index = 0;
-
-        // Print all letters left
-        while alph_index < letters_alphabetical.len() {
-            let a = get_next_x_items_from_array(ALPHABET_LINE_SIZE, alph_index, &letters_alphabetical, "");
-            let b = get_next_x_items_from_array(ALPHABET_LINE_SIZE, alph_index, &letters_frequency, "");
-            alph_index += ALPHABET_LINE_SIZE;
-
-            println!("{}      {}", a.to_uppercase(), b.to_uppercase());
+        // Print words used so far
+        println!("Words used: ");
+        for line in words {
+            println!("|{:1$}|", line, WORD_LENGTH);
         }
 
-        println!("\n");
-        print!("Double letters: ");
+        // Print letters left
+        println!("\n\nUnused Letters: ");
+
+        for i in 0..freq_lines.len() {
+            println!("|{:2$}  |  {:2$}|", alph_lines[i], freq_lines[i], ALPHABET_LINE_SIZE);
+        }
+
+        // Print double letters used
+        print!("\n\nDouble letters:  [");
         for letter in &double_letters {
-            print!("{}", letter)
+            print!("{},", letter)
         }
 
-        println!("\n\n");
-
-        // Print all used words
-        let mut word_index = 0;
-        while word_index < used_words.len() {
-            let word_line = get_next_x_items_from_array(WORD_LINE_SIZE, word_index, &used_words, ", ");
-            println!("{}", word_line.to_uppercase());
-            word_index += WORD_LINE_SIZE;
-        }
+        // Print letters removed after previous word
+        println!("]\nRemoved letters: [{}]", removed_letters);
     }
 }
 
-fn get_next_x_items_from_array<T: ToString>(num_items: usize, index: usize, arr: &Vec<T>, buffer: &str) -> String {
-    let mut ret: String = "".to_string();
-    for i in index..index + num_items {
-        let maybe = match &arr.get(i) {
-            Some(val) => val.to_string() + &buffer.to_string(),
-            None => " ".to_string(),
-        };
-        ret.push_str(&maybe);
+fn group_iter_into_blocks<T: ToString>(num_items: usize, data: impl Iterator<Item = T>, buffer: &str) -> Vec<String> {
+    let mut iter = data.peekable();
+    let mut ret: Vec<String> = Vec::new();
+
+    while iter.peek().is_some() {
+        let mut line = String::new();
+        for _ in 0..num_items {
+            if let Some(item) = iter.next() {
+                line.push_str(&format!("{}{}", item.to_string(), buffer).to_uppercase());
+            }
+        }
+        ret.push(line);
     }
     ret
 }
