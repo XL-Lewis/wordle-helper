@@ -7,7 +7,6 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 // TODO:
 // Track letter placement
-// Improve efficiency + data structures (hashmaps?)
 // Undo functionality
 
 use tokio::io::BufReader;
@@ -36,14 +35,7 @@ impl Letters {
         return false;
     }
 }
-// Components:
-// 1. stdin reader
-// 2. Alphabet checker
-// 3. Common letters checker
-// 4. Printer for 2 and 3
 
-// Alphabet struct:
-// hashmap with
 #[tokio::main]
 async fn main() {
     let (stdin_snd, stdin_rcv) = unbounded_channel::<String>();
