@@ -67,7 +67,7 @@ async fn check_word(mut rcv: UnboundedReceiver<String>) {
     let mut letters = Letters::new();
 
     loop {
-        println!("Enter word: ");
+        print_stuffs(&letters, &used_words);
 
         // Grab input from stdin
         let word = if let Some(wrd) = rcv.recv().await {
@@ -97,35 +97,36 @@ async fn check_word(mut rcv: UnboundedReceiver<String>) {
             }
         }
 
-        // Format letters for printing
-        let freq_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, letters.freq.iter(), "");
-        let alph_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, letters.alph.iter(), "");
-        // Format previously used words for printing
-        let words = group_iter_into_blocks(WORD_LINE_SIZE, used_words.iter(), ", ");
-
-        // Print words used so far
-        println!("Words used: ");
-        for line in words {
-            println!("|{:1$}|", line, WORD_LENGTH);
-        }
-
-        // Print letters left
-        println!("\n\nUnused Letters: ");
-
-        for i in 0..freq_lines.len() {
-            println!("|{:2$}  |  {:2$}|", alph_lines[i], freq_lines[i], ALPHABET_LINE_SIZE);
-        }
-
         // Print double letters used
-        print!("\n\nDouble letters:  [");
-        for letter in &double_letters {
-            print!("{}, ", letter)
-        }
-
+        print!("\n\nDouble letters:  ");
+        println!("{:20?}", double_letters);
         // Print letters removed after previous word
-        println!("]\nRemoved letters: [{}]", removed_letters);
-        println!("-----------------");
+        println!("Removed letters: [{}]", removed_letters);
     }
+}
+
+fn print_stuffs(letters: &Letters, used_words: &Vec<String>) {
+    // Format previously used words for printing
+    let words = group_iter_into_blocks(WORD_LINE_SIZE, used_words.iter(), ", ");
+
+    // Print words used so far
+    println!("Words used: ");
+    for line in words {
+        println!("|{:1$}|", line, WORD_LENGTH);
+    }
+
+    // Format letters for printing
+    let freq_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, letters.freq.iter(), "");
+    let alph_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, letters.alph.iter(), "");
+    // Print letters left
+    println!("\n\nUnused Letters: ");
+
+    for i in 0..freq_lines.len() {
+        println!("|   {:2$}   |   {:2$}   |", alph_lines[i], freq_lines[i], ALPHABET_LINE_SIZE);
+    }
+    println!("-------------------------");
+
+    println!("\nEnter word: ");
 }
 
 fn group_iter_into_blocks<T: ToString>(num_items: usize, data: impl Iterator<Item = T>, buffer: &str) -> Vec<String> {
@@ -136,7 +137,10 @@ fn group_iter_into_blocks<T: ToString>(num_items: usize, data: impl Iterator<Ite
         let mut line = String::new();
         for _ in 0..num_items {
             if let Some(item) = iter.next() {
-                line.push_str(&format!("{}{}", item.to_string(), buffer).to_uppercase());
+                line.push_str(&format!("{}", item.to_string()).to_uppercase());
+            }
+            if iter.peek().is_some() {
+                line.push_str(buffer);
             }
         }
         ret.push(line);
