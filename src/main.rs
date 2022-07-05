@@ -67,6 +67,7 @@ async fn check_word(mut rcv: UnboundedReceiver<String>) {
     let mut letters = Letters::new();
 
     loop {
+        // Print letter and word trackers
         print_stuffs(&letters, &used_words);
 
         // Grab input from stdin
@@ -75,16 +76,15 @@ async fn check_word(mut rcv: UnboundedReceiver<String>) {
         } else {
             break;
         };
-        print!("\x1B[2J\x1B[1;1H");
 
-        // Check word validity and
+        // Check word length and character validity
         if word.len() != WORD_LENGTH || !word.is_ascii() {
             println!("Invalid word! It should be 5 ascii letters. Length was {}", word.len());
             continue;
         }
         used_words.push(word.to_string());
 
-        // Double letter check
+        // Check word for double letters
         for letter in check_double_letter(&word) {
             double_letters.insert(letter);
         }
@@ -97,6 +97,8 @@ async fn check_word(mut rcv: UnboundedReceiver<String>) {
             }
         }
 
+        // Clear terminal
+        print!("\x1B[2J\x1B[1;1H");
         // Print double letters used
         print!("\n\nDouble letters:  ");
         println!("{:20?}", double_letters);
