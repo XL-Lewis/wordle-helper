@@ -1,23 +1,45 @@
+use anyhow::{bail, Result};
 use indexmap::{indexset, IndexSet};
 use std::collections::HashSet;
 use std::iter::Iterator;
+use std::time::Instant;
 use tokio::io;
 use tokio::io::AsyncBufReadExt;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 
 // TODO:
 // Track letter placement
 // Undo functionality
+// reset function
 
 use tokio::io::BufReader;
 
 const ALPHABET_LINE_SIZE: usize = 5;
-const WORD_LINE_SIZE: usize = 5;
-const WORD_LENGTH: usize = 5;
+const WORD_LINE_SIZE: usize = 16;
 
 pub struct Letters {
     alph: IndexSet<char>,
     freq: IndexSet<char>,
+}
+
+pub struct WordleHelper {
+    double_letters: HashSet<char>,
+    used_words: Vec<String>,
+    letters: Letters,
+    timer: Instant,
+    word_length: usize,
+}
+
+impl WordleHelper {
+    fn new(word_length: usize) -> Self {
+        Self {
+            double_letters: HashSet::new(),
+            used_words: Vec::new(),
+            letters: Letters::new(),
+            timer: Instant::now(),
+            word_length,
+        }
+    }
 }
 
 impl Letters {
@@ -37,21 +59,30 @@ impl Letters {
 }
 
 #[tokio::main]
-async fn main() {
-    let (stdin_snd, stdin_rcv) = unbounded_channel::<String>();
-    println!("Starting...");
-    tokio::spawn(get_stdin(stdin_snd));
-    tokio::spawn(check_word(stdin_rcv));
+async fn main() { tokio::spawn(get_stdin()).await.unwrap(); }
 
-    loop {}
-}
-
-async fn get_stdin(snd: UnboundedSender<String>) {
+async fn get_stdin() {
     let stdin = io::stdin();
     let mut lines = BufReader::new(stdin).lines();
+    let (snd, rcv) = unbounded_channel::<String>();
 
+    // Set word length
+    println!("Choose word length . . .");
     loop {
-        if let Some(word) = lines.next_line().await.unwrap() {
+        if let Some(input) = lines.next_line().await.expect("stdin is closed!") {
+            if let Ok(word_length) = input.parse::<usize>() {
+                println!("Okay! Word length is: {}", word_length);
+                tokio::spawn(word_handler(word_length, rcv));
+                break;
+            } else {
+                println!("Word length must be a valid positive integer!")
+            }
+        }
+    }
+
+    // Run main loop
+    loop {
+        if let Some(word) = lines.next_line().await.expect("stdin is closed!") {
             if word == "q" {
                 println!("Exiting . . .");
                 break;
@@ -61,74 +92,70 @@ async fn get_stdin(snd: UnboundedSender<String>) {
     }
 }
 
-async fn check_word(mut rcv: UnboundedReceiver<String>) {
-    let mut double_letters = HashSet::new();
-    let mut used_words: Vec<String> = Vec::new();
-    let mut letters = Letters::new();
+async fn word_handler(word_length: usize, mut rcv: UnboundedReceiver<String>) {
+    let mut data = WordleHelper::new(word_length);
 
     loop {
-        // Print letter and word trackers
-        print_stuffs(&letters, &used_words);
-
-        // Grab input from stdin
-        let word = if let Some(wrd) = rcv.recv().await {
-            wrd
-        } else {
-            break;
+        let word = match check_word(rcv.recv().await.unwrap(), data.word_length) {
+            Ok(val) => val,
+            Err(e) => {
+                print!("{}", e);
+                continue;
+            },
         };
 
-        // Check word length and character validity
-        if word.len() != WORD_LENGTH || !word.is_ascii() {
-            println!("Invalid word! It should be 5 ascii letters. Length was {}", word.len());
-            continue;
-        }
-        used_words.push(word.to_string());
-
+        let rmvd = data.process_word(word).await;
+        data.print_stuffs(rmvd);
+    }
+}
+impl WordleHelper {
+    async fn process_word(&mut self, word: String) -> Vec<char> {
         // Check word for double letters
         for letter in check_double_letter(&word) {
-            double_letters.insert(letter);
+            self.double_letters.insert(letter);
         }
 
         // Remove used letters from arrays
-        let mut removed_letters = String::new();
+        let mut removed_letters = Vec::new();
         for letter in word.chars() {
-            if letters.remove(letter) {
+            if self.letters.remove(letter) {
                 removed_letters.push(letter);
             }
         }
 
+        self.used_words.push(word.to_string());
+        removed_letters
+    }
+
+    fn print_stuffs(&mut self, rmvd: Vec<char>) {
+        // Format alphabet letters for printing
+        let freq_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, self.letters.freq.iter(), "");
+        let alph_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, self.letters.alph.iter(), "");
+        let words = group_iter_into_blocks(WORD_LINE_SIZE, self.used_words.iter(), ", ");
+
         // Clear terminal
         print!("\x1B[2J\x1B[1;1H");
-        // Print double letters used
-        print!("\n\nDouble letters:  ");
-        println!("{:20?}", double_letters);
-        // Print letters removed after previous word
-        println!("Removed letters: [{}]", removed_letters);
+
+        // Print Double letters and letters removed from most recent guess
+        print!("Removed letters : ");
+        rmvd.iter().for_each(|letter| print!("'{}' ", letter));
+        print!("\nDouble letters  : ");
+        self.double_letters.iter().for_each(|letter| print!("'{}' ", letter));
+
+        // Print used words
+        print!("\nWords used      : ");
+        words.iter().for_each(|line| println!("{:1$}", line, self.word_length * (WORD_LINE_SIZE + 2)));
+
+        // Print unused letters
+        println!("\n----  Unused Letters ----");
+        for i in 0..freq_lines.len() {
+            println!("|   {:2$}   |   {:2$}   |", alph_lines[i], freq_lines[i], ALPHABET_LINE_SIZE);
+        }
+
+        println!("-------------------------");
+        println!("Timer: {:?}", self.timer.elapsed());
+        println!("\nEnter word: ");
     }
-}
-
-fn print_stuffs(letters: &Letters, used_words: &Vec<String>) {
-    // Format previously used words for printing
-    let words = group_iter_into_blocks(WORD_LINE_SIZE, used_words.iter(), ", ");
-
-    // Print words used so far
-    println!("Words used: ");
-    for line in words {
-        println!("|{:1$}|", line, WORD_LENGTH);
-    }
-
-    // Format letters for printing
-    let freq_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, letters.freq.iter(), "");
-    let alph_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, letters.alph.iter(), "");
-    // Print letters left
-    println!("\n\nUnused Letters: ");
-
-    for i in 0..freq_lines.len() {
-        println!("|   {:2$}   |   {:2$}   |", alph_lines[i], freq_lines[i], ALPHABET_LINE_SIZE);
-    }
-    println!("-------------------------");
-
-    println!("\nEnter word: ");
 }
 
 fn group_iter_into_blocks<T: ToString>(num_items: usize, data: impl Iterator<Item = T>, buffer: &str) -> Vec<String> {
@@ -148,6 +175,16 @@ fn group_iter_into_blocks<T: ToString>(num_items: usize, data: impl Iterator<Ite
         ret.push(line);
     }
     ret
+}
+
+fn check_word(word: String, expected_size: usize) -> Result<String> {
+    if !word.is_ascii() {
+        bail!("Word [{}] was not valid ascii!", word);
+    }
+    if word.len() != expected_size {
+        bail!("Word [{}] was incorrect size!", word);
+    }
+    Ok(word)
 }
 
 fn check_double_letter(input: &str) -> Vec<char> {
