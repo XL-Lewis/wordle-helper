@@ -11,6 +11,7 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 // Track letter placement
 // Undo functionality
 // reset function
+// turn print into a structure or something and push updates to it (live timer?)
 
 use tokio::io::BufReader;
 
