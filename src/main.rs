@@ -193,13 +193,40 @@ fn check_double_letter(input: &str) -> Vec<char> {
     let mut ret = Vec::new();
 
     for i in 0..chars.len() {
-        let mut j = chars.len() - 1;
-        while j != i {
-            if chars[i] == chars[j] {
+        if chars[i + 1..chars.len()].contains(&chars[i]) {
+            if !ret.contains(&chars[i]) {
                 ret.push(chars[i]);
             }
-            j -= 1;
         }
     }
     ret
+}
+
+#[cfg(test)]
+mod test_double_letter {
+    use crate::check_double_letter;
+
+    #[test]
+    fn test_no_double_letter() {
+        let double_letters = check_double_letter("input");
+        assert_eq!(double_letters, [])
+    }
+
+    #[test]
+    fn test_one_double_letter() {
+        let double_letters = check_double_letter("aabcd");
+        assert_eq!(double_letters, ['a'])
+    }
+
+    #[test]
+    fn test_multiple_double_letters() {
+        let double_letters = check_double_letter("aabbccdceff");
+        println!("{:?}", double_letters);
+        assert!(
+            double_letters.contains(&'a')
+                && double_letters.contains(&'b')
+                && double_letters.contains(&'c')
+                && double_letters.contains(&'f')
+        )
+    }
 }
