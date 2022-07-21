@@ -39,7 +39,10 @@ impl WordleHelper {
             double_letters: HashSet::new(),
             used_words: Vec::new(),
             letters: Letters::new(),
-            letter_placement: ALPHABET.iter().map(|letter| (letter.clone(), BitVec::new_fill(true, 5))).collect(),
+            letter_placement: ALPHABET
+                .iter()
+                .map(|letter| (letter.clone(), BitVec::new_fill(true, word_length as u64)))
+                .collect(),
             timer: Instant::now(),
             word_length,
         }
@@ -49,7 +52,8 @@ impl WordleHelper {
         self.double_letters = HashSet::new();
         self.used_words = Vec::new();
         self.letters = Letters::new();
-        self.letter_placement = ALPHABET.iter().map(|letter| (letter.clone(), BitVec::new_fill(true, 5))).collect();
+        self.letter_placement =
+            ALPHABET.iter().map(|letter| (letter.clone(), BitVec::new_fill(true, self.word_length as u64))).collect();
         self.timer = Instant::now();
     }
 
@@ -105,7 +109,6 @@ impl WordleHelper {
         return match self.letter_placement.get(&letter) {
             Some(val) => {
                 let mut ret = String::new();
-                //TODO: this should be word max length
                 for i in 0..val.len() {
                     if val.get(i) {
                         ret.push(letter)
@@ -139,14 +142,14 @@ pub fn group_iter_into_blocks<T: ToString>(num_items: usize, data: impl Iterator
     ret
 }
 
-pub fn parse_input(word: String) -> Result<InputType> {
+pub fn parse_input(input: String) -> Result<InputType> {
     use Commands::*;
     use InputType::*;
-    if !word.is_ascii() {
+    if !input.is_ascii() {
         bail!("Input was invalid Ascii!")
     }
-    if word.starts_with("-") {
-        let args: Vec<&str> = word.strip_prefix("-").unwrap().split(' ').collect();
+    if input.starts_with("-") {
+        let args: Vec<&str> = input.strip_prefix("-").unwrap().split(' ').collect();
         let arg = args[0];
         match args.len() {
             1 => match arg {
@@ -161,14 +164,14 @@ pub fn parse_input(word: String) -> Result<InputType> {
         }
     }
 
-    Ok(WordGuess(word))
+    Ok(WordGuess(input))
 }
 
 #[cfg(test)]
 mod test_check_word {
     use super::parse_input;
     use super::Commands::*;
-    use super::WordType::*;
+    use super::InputType::*;
 
     #[test]
     fn test_valid_command() {
@@ -191,7 +194,7 @@ mod test_check_word {
         let word = "abcde".to_string();
         let res = parse_input(word);
 
-        assert_eq!(res.unwrap(), Word("abcde".to_string()))
+        assert_eq!(res.unwrap(), WordGuess("abcde".to_string()))
     }
     #[test]
     fn test_invalid_word() {
