@@ -24,7 +24,6 @@ const ALPHABET_BY_FREQUENCY: [char; 26] = [
 ];
 
 // TODO:
-// add "filled letters" to letter placement
 // Undo functionality
 // turn print into a structure or something and push updates to it (live timer?)
 
@@ -81,16 +80,34 @@ async fn word_handler(word_length: usize, mut rcv: UnboundedReceiver<String>) {
                     continue;
                 },
                 Placement => {
-                    let letters = &cmd.args[0];
-                    println!("Showing placement for letters: {}", letters);
-                    for char in letters.chars() {
-                        println!("{}", data.get_possible_letter_placement(char));
+                    let unknown_letters = &cmd.args[0];
+                    let known_letters = match cmd.args.get(1) {
+                        None => (0..word_length).map(|_| "_").collect(),
+                        Some(letters) => letters.to_string(),
+                    };
+
+                    println!("Showing placement for letters: {}", unknown_letters);
+                    // For each letter in arg
+                    for char in unknown_letters.chars() {
+                        // Get possible placements for letter
+                        let positions = data.get_possible_letter_placement(char);
+                        // If we have known letters in our word, replace with those instead
+                        let print_str = known_letters
+                            .chars()
+                            .zip(positions.chars())
+                            .map(|(known, position)| match known {
+                                '_' => position.to_ascii_lowercase(),
+                                _ => known.to_ascii_uppercase(),
+                            })
+                            .collect::<String>();
+
+                        println!("{}", print_str);
                     }
                 },
             },
 
             Err(e) => {
-                print!("{}", e);
+                println!("{}", e);
                 continue;
             },
         };
