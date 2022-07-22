@@ -3,7 +3,6 @@ use crate::guess::Guess;
 use crate::letters::Letters;
 use crate::ALPHABET;
 use crate::ALPHABET_LINE_SIZE;
-use crate::WORD_LINE_SIZE;
 
 use anyhow::{bail, Result};
 use bv::BitVec;
@@ -77,20 +76,16 @@ impl WordleHelper {
         // Format alphabet letters for printing
         let freq_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, self.letters.freq.iter(), "");
         let alph_lines = group_iter_into_blocks(ALPHABET_LINE_SIZE, self.letters.alph.iter(), "");
-        let words = group_iter_into_blocks(WORD_LINE_SIZE, self.used_words.iter(), ", ");
+        //let words = group_iter_into_blocks(WORD_LINE_SIZE, self.used_words.iter(), ", ");
 
         // Clear terminal
         print!("\x1B[2J\x1B[1;1H");
-
+        println!("Timer           : {:?}", self.timer.elapsed());
         // Print Double letters and letters removed from most recent guess
-        print!("Removed letters : ");
+        print!("Recent Removals : ");
         rmvd.iter().for_each(|letter| print!("'{}' ", letter));
-        print!("\nDouble letters  : ");
+        print!("\nDoubles         : ");
         self.double_letters.iter().for_each(|letter| print!("'{}' ", letter));
-
-        // Print used words
-        print!("\nWords used      : ");
-        words.iter().for_each(|line| println!("{:1$}", line, self.word_length * (WORD_LINE_SIZE + 2)));
 
         // Print unused letters
         println!("\n----  Unused Letters ----");
@@ -98,9 +93,10 @@ impl WordleHelper {
             println!("|   {:2$}   |   {:2$}   |", alph_lines[i], freq_lines[i], ALPHABET_LINE_SIZE);
         }
 
+        println!("-------------------------\n");
         println!("-------------------------");
-        println!("Timer: {:?}", self.timer.elapsed());
-        println!("\nEnter word: ");
+
+        println!("Input word or command: ");
     }
 
     pub fn get_possible_letter_placement(&self, letter: char) -> String {

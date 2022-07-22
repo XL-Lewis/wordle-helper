@@ -3,6 +3,7 @@ use anyhow::{bail, Result};
 #[derive(Debug, Eq, PartialEq)]
 pub enum Commands {
     Exit,
+    Clear,
     Reset,
     Placement,
 }
@@ -19,6 +20,7 @@ impl Commands {
 
         match self {
             Exit => 1,
+            Clear => 1,
             Reset => 2,
             Placement => 2,
         }
@@ -31,6 +33,7 @@ impl Commands {
             "-e" => Exit,
             "-r" => Reset,
             "-p" => Placement,
+            "-c" => Clear,
             _ => bail!("Unsupported arg: {}", arg),
         })
     }

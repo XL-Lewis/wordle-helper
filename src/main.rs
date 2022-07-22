@@ -13,7 +13,6 @@ use wordle_helper::WordleHelper;
 use wordle_helper::*;
 
 static ALPHABET_LINE_SIZE: usize = 5;
-static WORD_LINE_SIZE: usize = 16;
 const ALPHABET: [char; 26] = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
     'z',
@@ -25,7 +24,8 @@ const ALPHABET_BY_FREQUENCY: [char; 26] = [
 
 // TODO:
 // Undo functionality
-// turn print into a structure or something and push updates to it (live timer?)
+// clean up placement tracker
+// clean up printing with a buffer
 
 #[tokio::main]
 async fn main() { tokio::spawn(get_stdin()).await.unwrap(); }
@@ -75,6 +75,7 @@ async fn word_handler(word_length: usize, mut rcv: UnboundedReceiver<String>) {
             },
             Ok(Command(cmd)) => match cmd.command {
                 Exit => break,
+                Clear => data.print_stuffs([].to_vec()),
                 Reset => {
                     data.clear();
                     continue;
@@ -86,7 +87,7 @@ async fn word_handler(word_length: usize, mut rcv: UnboundedReceiver<String>) {
                         Some(letters) => letters.to_string(),
                     };
 
-                    println!("Showing placement for letters: {}", unknown_letters);
+                    println!("\n{}", known_letters);
                     // For each letter in arg
                     for char in unknown_letters.chars() {
                         // Get possible placements for letter
@@ -97,7 +98,7 @@ async fn word_handler(word_length: usize, mut rcv: UnboundedReceiver<String>) {
                             .zip(positions.chars())
                             .map(|(known, position)| match known {
                                 '_' => position.to_ascii_lowercase(),
-                                _ => known.to_ascii_uppercase(),
+                                _ => '_',
                             })
                             .collect::<String>();
 
