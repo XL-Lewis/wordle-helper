@@ -1,3 +1,4 @@
+use crate::args::Command;
 use crate::guess::Guess;
 use crate::letters::Letters;
 use crate::ALPHABET;
@@ -13,14 +14,7 @@ use std::time::Instant;
 #[derive(Debug, Eq, PartialEq)]
 pub enum InputType {
     WordGuess(String),
-    Command(Commands),
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum Commands {
-    Exit,
-    Reset,
-    GetPlacement(String),
+    Command(Command),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -60,13 +54,17 @@ impl WordleHelper {
     // Remove used letters from arrays and add letter placement
     pub async fn process_word(&mut self, guess: Guess) -> Result<Vec<char>> {
         let mut removed_letters = Vec::new();
+
         for (index, letter) in guess.word.chars().enumerate() {
+            // Letter placement
             self.letter_placement.get_mut(&letter).unwrap().set(index as u64, false);
+            // Removed letters
             if self.letters.remove(letter).is_some() {
                 removed_letters.push(letter);
             }
         }
 
+        // Add double letters
         guess.double_letters.iter().for_each(|&letter| {
             self.double_letters.insert(letter);
         });
@@ -143,51 +141,21 @@ pub fn group_iter_into_blocks<T: ToString>(num_items: usize, data: impl Iterator
 }
 
 pub fn parse_input(input: String) -> Result<InputType> {
-    use Commands::*;
-    use InputType::*;
     if !input.is_ascii() {
         bail!("Input was invalid Ascii!")
     }
     if input.starts_with("-") {
-        let args: Vec<&str> = input.strip_prefix("-").unwrap().split(' ').collect();
-        let arg = args[0];
-        match args.len() {
-            1 => match arg {
-                "exit" => return Ok(Command(Exit)),
-                "reset" => return Ok(Command(Reset)),
-                _ => bail!("Argument not supported!"),
-            },
-            _ => match arg {
-                "l" => return Ok(Command(GetPlacement(args[1].to_string()))),
-                _ => bail!("Argument not supported!"),
-            },
-        }
+        let args: Vec<&str> = input.split(' ').collect();
+        let cmd = Command::new(args)?;
+        return Ok(InputType::Command(cmd));
     }
-
-    Ok(WordGuess(input))
+    Ok(InputType::WordGuess(input))
 }
 
 #[cfg(test)]
 mod test_check_word {
     use super::parse_input;
-    use super::Commands::*;
     use super::InputType::*;
-
-    #[test]
-    fn test_valid_command() {
-        let word = "-l abcd".to_string();
-        let res = parse_input(word);
-
-        assert_eq!(res.unwrap(), Command(GetPlacement("abcd".to_string())))
-    }
-
-    #[test]
-    fn test_invalid_command() {
-        let word = "-z".to_string();
-        let res = parse_input(word);
-
-        assert!(res.is_err())
-    }
 
     #[test]
     fn test_valid_word() {

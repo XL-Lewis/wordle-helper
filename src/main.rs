@@ -1,7 +1,9 @@
+mod args;
 mod guess;
 mod letters;
 mod wordle_helper;
 
+use args::Commands;
 use guess::Guess;
 use tokio::io;
 use tokio::io::AsyncBufReadExt;
@@ -22,9 +24,8 @@ const ALPHABET_BY_FREQUENCY: [char; 26] = [
 ];
 
 // TODO:
-// Track letter placement
+// add "filled letters" to letter placement
 // Undo functionality
-// reset function
 // turn print into a structure or something and push updates to it (live timer?)
 
 #[tokio::main]
@@ -63,28 +64,31 @@ async fn word_handler(word_length: usize, mut rcv: UnboundedReceiver<String>) {
     let mut data = WordleHelper::new(word_length.clone());
     loop {
         match parse_input(rcv.recv().await.unwrap()) {
-            Ok(WordGuess(guess)) => {
-                let res = Guess::new(guess, word_length);
-                if let Ok(guess) = res {
+            Ok(WordGuess(guess)) => match Guess::new(guess, word_length) {
+                Ok(guess) => {
                     let rmvd = data.process_word(guess).await.unwrap();
                     data.print_stuffs(rmvd);
-                } else {
-                    print!("{:?}", res.unwrap_err());
+                },
+                Err(e) => {
+                    print!("{:?}", e);
                     continue;
-                }
+                },
             },
-            Ok(Command(GetPlacement(letters))) => {
-                println!("Showing placement for letters: {}", letters);
+            Ok(Command(cmd)) => match cmd.command {
+                Exit => break,
+                Reset => {
+                    data.clear();
+                    continue;
+                },
+                Placement => {
+                    let letters = &cmd.args[0];
+                    println!("Showing placement for letters: {}", letters);
+                    for char in letters.chars() {
+                        println!("{}", data.get_possible_letter_placement(char));
+                    }
+                },
+            },
 
-                for char in letters.chars() {
-                    println!("{}", data.get_possible_letter_placement(char));
-                }
-            },
-            Ok(Command(Exit)) => break,
-            Ok(Command(Reset)) => {
-                data.clear();
-                continue;
-            },
             Err(e) => {
                 print!("{}", e);
                 continue;
