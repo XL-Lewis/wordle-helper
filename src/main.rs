@@ -24,7 +24,6 @@ const ALPHABET_BY_FREQUENCY: [char; 26] = [
 
 // TODO:
 // Undo functionality
-// clean up placement tracker
 // clean up printing with a buffer
 
 #[tokio::main]
@@ -74,36 +73,12 @@ async fn word_handler(word_length: usize, mut rcv: UnboundedReceiver<String>) {
                 },
             },
             Ok(Command(cmd)) => match cmd.command {
-                Exit => break,
+                Placement => data.print_possible_letter_placement(cmd.args),
                 Clear => data.print_stuffs([].to_vec()),
+                Exit => break,
                 Reset => {
                     data.clear();
                     continue;
-                },
-                Placement => {
-                    let unknown_letters = &cmd.args[0];
-                    let known_letters = match cmd.args.get(1) {
-                        None => (0..word_length).map(|_| "_").collect(),
-                        Some(letters) => letters.to_string(),
-                    };
-
-                    println!("\n{}", known_letters);
-                    // For each letter in arg
-                    for char in unknown_letters.chars() {
-                        // Get possible placements for letter
-                        let positions = data.get_possible_letter_placement(char);
-                        // If we have known letters in our word, replace with those instead
-                        let print_str = known_letters
-                            .chars()
-                            .zip(positions.chars())
-                            .map(|(known, position)| match known {
-                                '_' => position.to_ascii_lowercase(),
-                                _ => '_',
-                            })
-                            .collect::<String>();
-
-                        println!("{}", print_str);
-                    }
                 },
             },
 

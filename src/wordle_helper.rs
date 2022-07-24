@@ -115,6 +115,32 @@ impl WordleHelper {
             None => "".to_string(),
         };
     }
+
+    pub fn print_possible_letter_placement(&self, args: Vec<String>) {
+        let unknown_letters = &args[0];
+        let known_letters = match args.get(1) {
+            None => (0..self.word_length).map(|_| "_").collect(),
+            Some(letters) => letters.to_string(),
+        };
+
+        println!("\n{}", known_letters);
+        // For each letter in arg
+        for char in unknown_letters.chars() {
+            // Get possible placements for letter
+            let positions = self.get_possible_letter_placement(char);
+            // If we have known letters in our word, replace with those instead
+            let print_str = known_letters
+                .chars()
+                .zip(positions.chars())
+                .map(|(known, position)| match known {
+                    '_' => position.to_ascii_lowercase(),
+                    _ => '_',
+                })
+                .collect::<String>();
+
+            println!("{}", print_str);
+        }
+    }
 }
 
 pub fn group_iter_into_blocks<T: ToString>(num_items: usize, data: impl Iterator<Item = T>, buffer: &str) -> Vec<String> {
