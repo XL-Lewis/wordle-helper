@@ -1,14 +1,13 @@
-use crate::args::Command;
-use crate::guess::Guess;
-use crate::letters::Letters;
-use crate::ALPHABET;
-use crate::ALPHABET_LINE_SIZE;
+use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
 use anyhow::{bail, Result};
 use bv::BitVec;
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::time::Instant;
+
+use crate::args::Command;
+use crate::guess::Guess;
+use crate::letters::Letters;
+use crate::{ALPHABET, ALPHABET_LINE_SIZE};
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum InputType {
@@ -32,10 +31,7 @@ impl WordleHelper {
             double_letters: HashSet::new(),
             used_words: Vec::new(),
             letters: Letters::new(),
-            letter_placement: ALPHABET
-                .iter()
-                .map(|letter| (letter.clone(), BitVec::new_fill(true, word_length as u64)))
-                .collect(),
+            letter_placement: ALPHABET.iter().map(|letter| (letter.clone(), BitVec::new_fill(true, word_length as u64))).collect(),
             timer: Instant::now(),
             word_length,
         }
@@ -45,8 +41,7 @@ impl WordleHelper {
         self.double_letters = HashSet::new();
         self.used_words = Vec::new();
         self.letters = Letters::new();
-        self.letter_placement =
-            ALPHABET.iter().map(|letter| (letter.clone(), BitVec::new_fill(true, self.word_length as u64))).collect();
+        self.letter_placement = ALPHABET.iter().map(|letter| (letter.clone(), BitVec::new_fill(true, self.word_length as u64))).collect();
         self.timer = Instant::now();
     }
 
@@ -117,13 +112,16 @@ impl WordleHelper {
     }
 
     pub fn print_possible_letter_placement(&self, args: Vec<String>) {
+        println!("");
         let unknown_letters = &args[0];
         let known_letters = match args.get(1) {
             None => (0..self.word_length).map(|_| "_").collect(),
-            Some(letters) => letters.to_string(),
+            Some(letters) => {
+                println!("{}", letters.to_ascii_uppercase());
+                letters.to_string()
+            },
         };
 
-        println!("\n{}", known_letters);
         // For each letter in arg
         for char in unknown_letters.chars() {
             // Get possible placements for letter
@@ -167,7 +165,7 @@ pub fn parse_input(input: String) -> Result<InputType> {
         bail!("Input was invalid Ascii!")
     }
     if input.starts_with("-") {
-        let args: Vec<&str> = input.split(' ').collect();
+        let args: Vec<&str> = input.split_ascii_whitespace().collect();
         let cmd = Command::new(args)?;
         return Ok(InputType::Command(cmd));
     }

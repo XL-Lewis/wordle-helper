@@ -83,8 +83,10 @@ impl Command {
 mod tests {
     use super::*;
     mod commands {
-        use super::*;
         use Commands::*;
+
+        use super::*;
+
         #[test]
         fn test_valid_arg() -> Result<()> {
             let command = Commands::command_from_str("-p")?;

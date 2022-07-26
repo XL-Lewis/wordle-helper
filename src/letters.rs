@@ -1,7 +1,6 @@
-use crate::ALPHABET;
-use crate::ALPHABET_BY_FREQUENCY;
-
 use indexmap::IndexSet;
+
+use crate::{ALPHABET, ALPHABET_BY_FREQUENCY};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Letters {

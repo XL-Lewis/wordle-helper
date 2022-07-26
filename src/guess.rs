@@ -52,11 +52,6 @@ mod test_double_letter {
     fn test_multiple_double_letters() {
         let double_letters = find_double_letters("aabbccdceff");
         println!("{:?}", double_letters);
-        assert!(
-            double_letters.contains(&'a')
-                && double_letters.contains(&'b')
-                && double_letters.contains(&'c')
-                && double_letters.contains(&'f')
-        )
+        assert!(double_letters.contains(&'a') && double_letters.contains(&'b') && double_letters.contains(&'c') && double_letters.contains(&'f'))
     }
 }
