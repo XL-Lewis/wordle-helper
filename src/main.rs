@@ -72,6 +72,7 @@ async fn word_handler(word_length: usize, mut rcv: UnboundedReceiver<String>) {
 
             Ok(Command(cmd)) => match cmd.command {
                 Placement => data.print_possible_letter_placement(cmd.args),
+                Solver => data.show_possible_combinations(cmd.args),
                 Clear => data.print_stuffs([].to_vec()),
                 Exit => break,
                 Reset => {

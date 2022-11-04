@@ -10,6 +10,8 @@ pub enum Commands {
     Reset,
     /// Print placement of letters
     Placement,
+    /// Show all possible combos
+    Solver,
 }
 
 impl Commands {
@@ -20,6 +22,7 @@ impl Commands {
             Clear => 1,
             Reset => 2,
             Placement => 2,
+            Solver => 2,
         }
     }
 
@@ -35,6 +38,7 @@ impl Commands {
             "-c" => Clear,
             "-r" => Reset,
             "-p" => Placement,
+            "-s" => Solver,
             _ => bail!("Unsupported arg: {}", arg),
         })
     }
@@ -46,6 +50,7 @@ impl Commands {
             Clear => "'-c'",
             Reset => "'-r [word_size]'",
             Placement => "-p [Letters] [Word Layout]\nExample: -p av C_R_E",
+            Solver => "-s [Letters] [Word Layout]\n Example: -s abd F__T_",
         }
         .to_string()
     }

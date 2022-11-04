@@ -138,7 +138,59 @@ impl WordleHelper {
 
             println!("{}", print_str);
         }
+        println!("");
     }
+
+    pub fn show_possible_combinations(&self, args: Vec<String>) {
+        println!("");
+        let unknown_letters = &args[0];
+        let known_letters = match args.get(1) {
+            None => (0..self.word_length).map(|_| "_").collect(),
+            Some(letters) => {
+                println!("{}\n", letters.to_ascii_uppercase());
+                letters.to_string()
+            },
+        };
+        let mut guesses: Vec<String> = vec![known_letters];
+
+        for letter in unknown_letters.chars() {
+            let mut updated_guesses: Vec<String> = Vec::new();
+            for guess in &guesses {
+                // TODO: This could use a rewrite
+                let placements = self.get_possible_letter_placement(letter);
+                let mut expanded = get_possible_placement_strings(letter, &placements, guess).to_owned();
+                updated_guesses.extend_from_slice(&mut expanded)
+            }
+            if !updated_guesses.is_empty() {
+                guesses = updated_guesses.to_vec();
+            }
+        }
+
+        for guess in guesses {
+            println!("{}", guess);
+        }
+        println!("");
+    }
+}
+
+// Takes a letter ('y') and a guess ("A_B_C") and returns every combo of that letter in that string ("AYBC", "A_BYC")
+pub fn get_possible_placement_strings(letter: char, potential_placements: &str, word: &str) -> Vec<String> {
+    // TODO: Breaks if you try more letters than there are guesses
+    let mut guesses: Vec<String> = Vec::new();
+    for (index, value) in word.chars().enumerate() {
+        if value == '_' {
+            match potential_placements.get(index..index + 1) {
+                Some("_") | None => {},
+                Some(_) => {
+                    let mut guess = word.to_string();
+                    guess.replace_range(index..index + 1, &letter.to_uppercase().to_string());
+                    guesses.push(guess);
+                },
+            }
+        }
+    }
+
+    return guesses;
 }
 
 pub fn group_iter_into_blocks<T: ToString>(num_items: usize, data: impl Iterator<Item = T>, buffer: &str) -> Vec<String> {
@@ -174,8 +226,8 @@ pub fn parse_input(input: String) -> Result<InputType> {
 
 #[cfg(test)]
 mod test_check_word {
-    use super::parse_input;
     use super::InputType::*;
+    use super::{get_possible_placement_strings, parse_input};
 
     #[test]
     fn test_valid_word() {
@@ -190,5 +242,13 @@ mod test_check_word {
         let res = parse_input(word);
 
         assert!(res.is_err())
+    }
+    #[test]
+    fn test_get_possible_guesses() {
+        let known = "A_E_F";
+        let placements = "___ZZ".to_string();
+        let res = get_possible_placement_strings('z', &placements, known);
+
+        assert_eq!(res, ["A_EZF"])
     }
 }
