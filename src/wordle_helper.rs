@@ -75,7 +75,7 @@ impl WordleHelper {
 
         // Clear terminal
         print!("\x1B[2J\x1B[1;1H");
-        println!("Timer           : {:?}", self.timer.elapsed());
+        println!("Timer           : {:.2?}", self.timer.elapsed());
         // Print Double letters and letters removed from most recent guess
         print!("Recent Removals : ");
         rmvd.iter().for_each(|letter| print!("'{}' ", letter));
