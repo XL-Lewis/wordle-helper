@@ -5,10 +5,25 @@
 # Usage
 1. First, input a word size (regular wordle is 5 letters)
 2. Enter words as you guess them, and the helper will display:
-  i)   A timer
-  ii)  A set of the last letters removed
-  iii) A set of any letters which have been used more than once in a single word
-  iv)  A summary of unused letters, sorted alphabetically AND by letter frequency
+
+- A timer
+- A set of the last letters removed
+- A set of any letters which have been used more than once in a single word
+- A summary of unused letters, sorted alphabetically AND by letter frequency
+i.e:
+```
+Timer           : 131.270309187s
+Recent Removals : 
+Doubles         : 'e' 'o' 't' 
+----  Unused Letters ----
+|   HJKMP   |   PMHYW   |
+|   VWXYZ   |   KVXZJ   |
+-------------------------
+
+-------------------------
+Input word or command: 
+
+```
 
 ## Commands / Args
 
