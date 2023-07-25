@@ -12,7 +12,7 @@
 - A summary of unused letters, sorted alphabetically AND by letter frequency
 i.e:
 ```
-Timer           : 131.270309187s
+Timer           : 131.27s
 Recent Removals : 
 Doubles         : 'e' 'o' 't' 
 ----  Unused Letters ----
